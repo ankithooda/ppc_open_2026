@@ -1,8 +1,8 @@
 clean:
-	rm -rf bin
+	rm bin/*
 
 bin:
 	mkdir -p bin
 
-01_intro: clean bin
-	g++ -o bin/01_intro 01_intro.cpp
+test: test.sh
+	./test.sh $(T)
