@@ -8,3 +8,6 @@ bin:
 
 test: test.sh
 	./test.sh $(T)
+
+benchmark:
+	./benchmark.sh
