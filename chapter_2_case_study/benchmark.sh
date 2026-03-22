@@ -1,5 +1,6 @@
 #!/bin/bash
 
-g++ -o bin/benchmark_test benchmark.cc
+rm ./bin/benchmark_test
+g++ -o bin/benchmark_test benchmark.cc $1/step.cc
 ./bin/benchmark_test
 

@@ -10,4 +10,4 @@ test: test.sh
 	./test.sh $(T)
 
 benchmark:
-	./benchmark.sh
+	./benchmark.sh $(T)
