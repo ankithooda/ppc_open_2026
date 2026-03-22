@@ -1,0 +1,14 @@
+###Available scripts
+
+##Generate 16 Million floats
+
+make gen_16million
+
+
+##Run test
+
+make test T=v0
+
+##Run Benchmark
+
+make benchmark T=v0
