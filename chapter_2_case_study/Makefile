@@ -11,3 +11,6 @@ test: test.sh
 
 benchmark:
 	./benchmark.sh $(T)
+
+asm:
+	g++ -S -g -O3 -march=native -std=c++17 benchmark.cc $(T)/step.cc

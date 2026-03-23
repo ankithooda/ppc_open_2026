@@ -1,0 +1,12 @@
+16 Million Floats
+
+1. Baseline
+
+v0                   - ~264s
+v0_alt               - ~444s
+
+
+2. Baseline with g++ -g -O3 -march=native -std=c++17
+
+v0                   - ~220s
+v0_alt               - ~235s
