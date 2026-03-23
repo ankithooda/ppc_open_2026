@@ -10,3 +10,8 @@ v0_alt               - ~444s
 
 v0                   - ~220s
 v0_alt               - ~235s
+
+
+3. Baseline v0 with openmp
+
+v0                   - ~105s
