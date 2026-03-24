@@ -78,5 +78,7 @@ int main(int argc, char **argv) {
 
     std::cout << "Useful ops (B) per sec: " << ops_per_sec << std::endl;
 
+    std::cout << "AWK_OUTPUT\t" << num << "\t" << duration.count() << "\t" << ops_per_sec << std::endl;
+
     return 0;
 }
