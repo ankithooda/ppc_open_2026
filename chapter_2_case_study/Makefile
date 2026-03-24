@@ -14,3 +14,6 @@ benchmark:
 
 asm:
 	g++ -S -g -O3 -march=native -std=c++17 benchmark.cc $(T)/step.cc
+
+gnuplot_data:
+	./generate_plot_data.sh $(T)
