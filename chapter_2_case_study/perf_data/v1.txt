@@ -1,0 +1,18 @@
+Input size 4000
+Loaded 16000000 floats.
+Useful ops in Billion: 128
+Time elapsed: 70.8764 s
+Useful ops (B) per sec: 1.80596
+AWK_OUTPUT	4000	70.8764	1.80596
+
+ Performance counter stats for './bin/v1_benchmark_test':
+
+       1,49,43,781      LLC-loads                                                               (66.67%)
+         27,42,844      LLC-load-misses                  #   18.35% of all LL-cache accesses    (66.67%)
+         63,68,609      LLC-stores                                                              (66.66%)
+   <not supported>      LLC-prefetches                                                        
+
+      73.195394627 seconds time elapsed
+
+      73.051005000 seconds user
+       0.131983000 seconds sys
