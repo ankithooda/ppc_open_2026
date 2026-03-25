@@ -15,5 +15,6 @@ set ylabel "Billion useful ops /sec"
 # Plot the data from the file "data.dat"
 # 'with linespoints' displays both lines and points
 plot 'v0/useful_ops_data' with linespoints title "v0", \
-     'v1/useful_ops_data' with linespoints title "v1"
+     'v1/useful_ops_data' with linespoints title "v1", \
+     'v2/useful_ops_data' with linespoints title "v2"
 

@@ -15,4 +15,5 @@ set ylabel "Wall-clock time in Sec"
 # Plot the data from the file "data.dat"
 # 'with linespoints' displays both lines and points
 plot 'v0/elapsed_time_data' with linespoints title "v0", \
-     'v1/elapsed_time_data' with linespoints title "v1"
+     'v1/elapsed_time_data' with linespoints title "v1", \
+     'v2/elapsed_time_data' with linespoints title "v2"
