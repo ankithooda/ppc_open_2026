@@ -1,6 +1,6 @@
 #!/bin/bash
 
-g++ -o bin/$1_test driver.cc $1/step.cc
+g++ -o bin/$1_test -march=native driver.cc $1/step.cc
 ./bin/$1_test > bin/test_output
 
 echo "Your Output"
