@@ -13,6 +13,7 @@
 void step(float* r, const float* d, int n);
 
 void print_vector_grid(__m512 *grid, int rows, int cols);
+void print_vector(__m512* vector);
 void print_float_grid(float *grid, int rows, int cols);
 
 void step(float* r, const float* d, int n) {
@@ -25,9 +26,9 @@ void step(float* r, const float* d, int n) {
     std::vector<float> padded_data(vector_cols * FLOAT_PER_VECTOR * n, infinity);
     std::vector<float> padded_transpose(vector_cols * FLOAT_PER_VECTOR * n, infinity);
 
-    print_float_grid((float *)d, n, n);
+    //print_float_grid((float *)d, n, n);
 
-    std::cout << n << vector_cols << FLOAT_PER_VECTOR << std::endl;
+    //std::cout << n << vector_cols << FLOAT_PER_VECTOR << std::endl;
 
     // Create transpose
     for (int i = 0; i < n; i++) {
@@ -72,52 +73,85 @@ void step(float* r, const float* d, int n) {
     float const *padded_data_memory = padded_data.data();
     float const *padded_transpose_memory = padded_transpose.data();
 
-    print_float_grid((float *)padded_data_memory, n, vector_cols * FLOAT_PER_VECTOR);
-    print_float_grid((float *)padded_transpose_memory, n, vector_cols * FLOAT_PER_VECTOR);
+    //print_float_grid((float *)padded_data_memory, n, vector_cols * FLOAT_PER_VECTOR);
+    //print_float_grid((float *)padded_transpose_memory, n, vector_cols * FLOAT_PER_VECTOR);
 
-    printf("Going in the loop\n");
 
     for (int i = 0; i < n; i++) {
 
         for (int j = 0; j < vector_cols; j++) {
-
-            printf("AVX-%d <- MEM-%d  <-  %f\n", j + i * vector_cols, (j * FLOAT_PER_VECTOR) +  (i * vector_cols * FLOAT_PER_VECTOR),
-                   *(padded_data_memory +  (j * FLOAT_PER_VECTOR) +  (i * vector_cols * FLOAT_PER_VECTOR)));
-
-
             data_avx[j + i * vector_cols] = _mm512_loadu_ps((void const*)(padded_data_memory +  (j * FLOAT_PER_VECTOR) +  (i * vector_cols * FLOAT_PER_VECTOR)));
 
             transpose_avx[j + i * vector_cols] = _mm512_loadu_ps((void const*)(padded_transpose_memory +  (j * FLOAT_PER_VECTOR) +  (i * vector_cols * FLOAT_PER_VECTOR)));
         }
     }
 
-    print_vector_grid(data_avx, n, vector_cols);
-    print_vector_grid(transpose_avx, n, vector_cols);
+    //    print_vector_grid(data_avx, n, vector_cols);
+    //print_vector_grid(transpose_avx, n, vector_cols);
 
 
+    // All data has been loaded, Solve now
 
+    for (int i = 0; i < n; i++) {
+
+        for (int j = 0; j < n; j++) {
+
+            __m512 min_vector = _mm512_set1_ps(infinity);
+
+
+            for (int k = 0; k < vector_cols; k++) {
+                __m512 sum_vector = _mm512_add_ps(data_avx[k + i * vector_cols], transpose_avx[k + j * vector_cols]);
+
+                // min_mask is 1 where sum_vector element is smaller
+                __mmask16 min_mask = _mm512_cmplt_ps_mask(sum_vector, min_vector);
+
+
+                // copy elements from sum_vector to min_vector using min_mask as write mask
+                min_vector = _mm512_mask_mov_ps(min_vector, min_mask, sum_vector);
+
+            }
+
+            // Set values in result matrix
+            r[j + i * n] = _mm512_reduce_min_ps(min_vector);
+        }
+    }
+}
+
+
+void print_vector(__m512 *vector) {
+    float *single_vector_mem = (float *)malloc(sizeof(float) * FLOAT_PER_VECTOR);
+    __mmask16 write_all= _cvtu32_mask16(65535);
+
+    // Store a AVX-512 into FLOAT_PER_VECTOR floats
+    _mm512_mask_compressstoreu_ps((void *)single_vector_mem, write_all, *vector);
+
+    // Print all floats in the AVX-512 vector
+
+    for (int k = 0; k < FLOAT_PER_VECTOR; k++) {
+        printf("%f ", single_vector_mem[k]);
+    }
+    printf("\n");
+    free(single_vector_mem);
 }
 
 void print_vector_grid(__m512 *grid, int rows, int cols) {
 
-    float *single_vector = (float *)malloc(sizeof(float) * FLOAT_PER_VECTOR);
-
     for (int i = 0; i < rows; i++) {
 
         for (int j = 0; j < cols; j++) {
-            __mmask16 write_all= _cvtu32_mask16(65535);
+            print_vector(grid + j + i * cols);
+            // __mmask16 write_all= _cvtu32_mask16(65535);
 
-            //grid[j + i * cols] = _mm512_set4_ps(6, 7, 8, 9);
-            // Store a AVX-512 into FLOAT_PER_VECTOR floats
-            _mm512_mask_compressstoreu_ps((void *)single_vector, write_all, grid[j + i * cols]);
+            // //grid[j + i * cols] = _mm512_set4_ps(6, 7, 8, 9);
+            // // Store a AVX-512 into FLOAT_PER_VECTOR floats
+            // _mm512_mask_compressstoreu_ps((void *)single_vector, write_all, grid[j + i * cols]);
 
-            // Print all floats in the single vector
+            // // Print all floats in the single vector
 
-            for (int k = 0; k < FLOAT_PER_VECTOR; k++) {
-                printf("%f ", single_vector[k]);
-            }
+            // for (int k = 0; k < FLOAT_PER_VECTOR; k++) {
+            //     printf("%f ", single_vector[k]);
+            // }
         }
-        std::cout << std::endl;
     }
 }
 
