@@ -85,16 +85,17 @@ void step(float* r, const float* d, int n) {
                    *(padded_data_memory +  (j * FLOAT_PER_VECTOR) +  (i * vector_cols * FLOAT_PER_VECTOR)));
 
 
+            data_avx[j + i * vector_cols] = _mm512_loadu_ps((void const*)(padded_data_memory +  (j * FLOAT_PER_VECTOR) +  (i * vector_cols * FLOAT_PER_VECTOR)));
 
-            data_avx[j + i * n] = _mm512_loadu_ps((void const*)(padded_data_memory +  (j * FLOAT_PER_VECTOR) +  (i * vector_cols * FLOAT_PER_VECTOR)));
-            //data_avx[j + i * n] = _mm512_set4_ps(1, 2, 3, 4);
-
-            transpose_avx[j + i * n] = _mm512_loadu_ps((void const*)(padded_transpose_memory +  (j * FLOAT_PER_VECTOR) +  (i * vector_cols * FLOAT_PER_VECTOR)));
+            transpose_avx[j + i * vector_cols] = _mm512_loadu_ps((void const*)(padded_transpose_memory +  (j * FLOAT_PER_VECTOR) +  (i * vector_cols * FLOAT_PER_VECTOR)));
         }
     }
 
     print_vector_grid(data_avx, n, vector_cols);
     print_vector_grid(transpose_avx, n, vector_cols);
+
+
+
 }
 
 void print_vector_grid(__m512 *grid, int rows, int cols) {
