@@ -7,7 +7,7 @@ bin:
 	mkdir -p bin
 
 test: test.sh
-	./test.sh $(T)
+	./test.sh $(T) $(S)
 
 benchmark:
 	./benchmark.sh $(T) $(N)
