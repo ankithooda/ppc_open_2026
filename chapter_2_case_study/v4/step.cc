@@ -25,7 +25,14 @@ void step(float* r, const float* d, int n) {
     constexpr float infinity = std::numeric_limits<float>::infinity();
 
 
-    int avx_grid_cols = (vector_cols + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    int avx_grid_cols;
+
+    if (vector_cols < BLOCK_SIZE) {
+        avx_grid_cols = BLOCK_SIZE;
+    } else {
+        avx_grid_cols = (vector_cols + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        avx_grid_cols = avx_grid_cols * BLOCK_SIZE;
+    }
     //avx_grid_cols = avx_grid_cols * BLOCK_SIZE;
 
     int avx_grid_rows = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
@@ -137,28 +144,62 @@ void step(float* r, const float* d, int n) {
 
     // All data has been loaded, Solve now
 
-    for (int i = 0; i < n; i++) {
+    // We iterate over the avx arrays in chunks of BLOCK_SIZE * BLOCK_SIZE.
 
-        for (int j = 0; j < n; j++) {
+    for (int i = 0; i < avx_grid_rows; i = i + BLOCK_SIZE) {
 
-            __m512 min_vector = _mm512_set1_ps(infinity);
+        for (int j = 0; j < avx_grid_rows; j = j + BLOCK_SIZE) {
 
+            // For each block, we track BLOCK_SIZE * BLOCK_SIZE min values
 
-            for (int k = 0; k < vector_cols; k++) {
-                __m512 sum_vector = _mm512_add_ps(data_avx[k + i * vector_cols], transpose_avx[k + j * vector_cols]);
+            __m512 min_vector[BLOCK_SIZE][BLOCK_SIZE];
 
-                // min_mask is 1 where sum_vector element is smaller
-                __mmask16 min_mask = _mm512_cmplt_ps_mask(sum_vector, min_vector);
-
-
-                // copy elements from sum_vector to min_vector using min_mask as write mask
-                min_vector = _mm512_mask_mov_ps(min_vector, min_mask, sum_vector);
-
+            for (int mi = 0; mi < BLOCK_SIZE; mi++) {
+                for (int mj = 0; mj < BLOCK_SIZE; mj++) {
+                    min_vector[mi][mj] = _mm512_set1_ps(infinity);
+                }
             }
 
-            // Set values in result matrix
-            r[j + i * n] = _mm512_reduce_min_ps(min_vector);
+            for (int k = 0; k < avx_grid_cols; k++) {
+
+                // We have BLOCK_SIZE*BLOCK_SIZE values
+
+                for (int mi = 0; mi < BLOCK_SIZE; mi++) {
+
+                    for (int mj = 0; mj < BLOCK_SIZE; mj++) {
+
+                        __m512 sum_vector = _mm512_add_ps(data_avx[k + (i + mi) * avx_grid_cols], transpose_avx[k + (j + mj) * avx_grid_cols]);
+
+                        // print_vector(&data_avx[k + (i + mi) * avx_grid_cols]);
+                        // print_vector(&transpose_avx[k + (j + mj) * avx_grid_cols]);
+
+                        // printf("\n\n");
+                        __mmask16 min_mask = _mm512_cmplt_ps_mask(sum_vector, min_vector[mi][mj]);
+                        min_vector[mi][mj] = _mm512_mask_mov_ps(min_vector[mi][mj], min_mask, sum_vector);
+                    }
+                }
+            }
+
+            //printf("Calculating result matrix \n");
+            for (int mi = 0; mi < BLOCK_SIZE; mi++) {
+
+                for (int mj = 0; mj < BLOCK_SIZE; mj++) {
+
+                    int ri = i + mi;
+                    int rj = j + mj;
+
+                    // printf("%d %d ", ri, rj);
+                    // print_vector(&min_vector[mi][mj]);
+                    // printf("\n");
+
+                    if (ri < n && rj < n) {
+                        r[rj + ri * n] = _mm512_reduce_min_ps(min_vector[mi][mj]);
+                    }
+                }
+            }
+            //printf("Calcualtion done.\n");
         }
+
     }
 }
 
@@ -185,11 +226,10 @@ void print_vector_grid(__m512 *grid, int rows, int cols) {
     printf("Print AVX grid of %d rows and %d cols\n", rows, cols);
 
     for (int i = 0; i < rows; i++) {
-
         for (int j = 0; j < cols; j++) {
-            //printf("\nPrinting %d column of %d row.\n", j, i);
             print_vector(grid + j + i * cols);
         }
+        printf("\n");
     }
 }
 
@@ -201,10 +241,7 @@ void print_float_grid(float *grid, int rows, int cols) {
     for (int i = 0; i < rows; i++) {
 
         for (int j = 0; j < cols; j++) {
-
             printf("(%f) | ", grid[j + i * cols]);
-
-            //std::cout << grid[j + i * rows] << " (" << j + i * rows << ") ";
         }
         std::cout << std::endl;
     }

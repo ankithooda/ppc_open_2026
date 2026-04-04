@@ -14,7 +14,7 @@ int main (int argc, char **argv) {
     std::string large = "large";
     std::string mid = "mid";
 
-    if (argc == 2) {
+    if (argc != 2) {
         std::cerr << "Provide test suite name\n" << std::endl;
         return 1;
     }
