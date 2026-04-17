@@ -13,7 +13,7 @@ benchmark:
 	./benchmark.sh $(T) $(N)
 
 perf:
-	perf stat -e LLC-loads,LLC-load-misses,LLC-stores,LLC-prefetches ./bin/$(T)_benchmark_test
+	perf stat -e L1-dcache-loads,L1-dcache-load-misses,LLC-loads,LLC-load-misses,LLC-stores,LLC-prefetches ./bin/$(T)_benchmark_test
 
 asm:
 	g++ -S -g -O3 -march=native -std=c++17 benchmark.cc $(T)/step.cc

@@ -52,6 +52,8 @@ void correlate(int ny, int nx, const float *data, float *result) {
         }
     }
 
+    print_double_grid(norm_data, ny, pad_nx);
+
     __m512d *avx_grid;
 
     if (posix_memalign((void**)&avx_grid, 64, ny * avx_cols * BLOCK_SIZE * sizeof(double)) != 0) {
@@ -104,7 +106,7 @@ void print_double_grid(double *grid, int rows, int cols) {
 
         for (int j = 0; j < cols; j++) {
 
-            printf("%f ", grid[j + i * rows]);
+            printf("%f ", grid[j + i * cols]);
         }
         printf("\n");
     }
