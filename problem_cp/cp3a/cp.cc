@@ -45,6 +45,7 @@ void correlate(int ny, int nx, const float *data, float *result) {
 
     // Row wise normalization
 
+    #pragma omp parallel for
     for (int i = 0; i < ny; i++) {
 
         double sum = 0.0;
@@ -85,6 +86,7 @@ void correlate(int ny, int nx, const float *data, float *result) {
     }
 
     // Convert to vector
+    #pragma omp parallel for
     for (int i = 0; i < ny; i++) {
 
         for (int j = 0; j < avx_cols; j++) {
@@ -108,17 +110,18 @@ void correlate(int ny, int nx, const float *data, float *result) {
 
 
 
-    __m512d *cache_grid;
+    // __m512d *cache_grid;
 
-    if (posix_memalign((void**)&cache_grid, 64, CACHE_BLOCK * CACHE_BLOCK * DOUBLES_PER_VECTOR * sizeof(double)) != 0) {
-        // Return from function, this will cause
-        // address sanitizer issuer in the testing framework
-        // as other memory has not been freed.
-        // We dont care if we are not able to allocate memory for the __m512d
-        // all is lost.
-        return;
-    }
+    // if (posix_memalign((void**)&cache_grid, 64, CACHE_BLOCK * CACHE_BLOCK * DOUBLES_PER_VECTOR * sizeof(double)) != 0) {
+    //     // Return from function, this will cause
+    //     // address sanitizer issuer in the testing framework
+    //     // as other memory has not been freed.
+    //     // We dont care if we are not able to allocate memory for the __m512d
+    //     // all is lost.
+    //     return;
+    // }
 
+    #pragma omp parallel for
     for (int row1 = 0; row1 < avx_rows; row1 = row1 + CACHE_BLOCK) {
 
         for (int row2 = 0; row2 < avx_rows; row2 = row2 + CACHE_BLOCK) {
@@ -126,6 +129,18 @@ void correlate(int ny, int nx, const float *data, float *result) {
             if (row1 > row2) {
                 continue;
             }
+
+            __m512d *cache_grid;
+
+            if (posix_memalign((void**)&cache_grid, 64, CACHE_BLOCK * CACHE_BLOCK * DOUBLES_PER_VECTOR * sizeof(double)) != 0) {
+                // Return from function, this will cause
+                // address sanitizer issuer in the testing framework
+                // as other memory has not been freed.
+                // We dont care if we are not able to allocate memory for the __m512d
+                // all is lost.
+                //return;
+            }
+
 
             // Cache grid acts a accumulator
             for (int ci = 0; ci < CACHE_BLOCK; ci++) {
@@ -135,6 +150,7 @@ void correlate(int ny, int nx, const float *data, float *result) {
                 }
             }
 
+            //asm("# loop starts here");
             for (int k = 0; k < avx_cols; k++) {
 
                 for (int ci = 0; ci < CACHE_BLOCK; ci++) {
@@ -145,6 +161,7 @@ void correlate(int ny, int nx, const float *data, float *result) {
                     }
                 }
             }
+            //asm("# loop ends here");
 
             for (int ci = 0; ci < CACHE_BLOCK; ci++) {
 
@@ -161,13 +178,14 @@ void correlate(int ny, int nx, const float *data, float *result) {
             }
 
             //print_vector_grid(cache_grid, CACHE_BLOCK, CACHE_BLOCK);
+            free(cache_grid);
 
         }
     }
 
     free(norm_data);
     free(avx_grid);
-    free(cache_grid);
+    //free(cache_grid);
 
 }
 
