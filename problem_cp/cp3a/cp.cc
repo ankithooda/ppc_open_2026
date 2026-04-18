@@ -130,16 +130,7 @@ void correlate(int ny, int nx, const float *data, float *result) {
                 continue;
             }
 
-            // __m512d *cache_grid;
-
-            // if (posix_memalign((void**)&cache_grid, 64, CACHE_BLOCK * CACHE_BLOCK * DOUBLES_PER_VECTOR * sizeof(double)) != 0) {
-            //     // Return from function, this will cause
-            //     // address sanitizer issuer in the testing framework
-            //     // as other memory has not been freed.
-            //     // We dont care if we are not able to allocate memory for the __m512d
-            //     // all is lost.
-            //     //return;
-            // }
+            // These must occupy 16 AVX zmm registers
 
             __m512d cache_00 =  _mm512_set1_pd(0);
             __m512d cache_01 =  _mm512_set1_pd(0);
@@ -161,36 +152,41 @@ void correlate(int ny, int nx, const float *data, float *result) {
             __m512d cache_32 =  _mm512_set1_pd(0);
             __m512d cache_33 =  _mm512_set1_pd(0);
 
-            // Cache grid acts a accumulator
-            // for (int ci = 0; ci < CACHE_BLOCK; ci++) {
-
-            //     for (int cj = 0; cj < CACHE_BLOCK; cj++) {
-            //         cache_grid[cj + ci * CACHE_BLOCK] =  _mm512_set1_pd(0);
-            //     }
-            // }
 
             //asm("# loop starts here");
             for (int k = 0; k < avx_cols; k++) {
 
-                cache_00 = _mm512_fmadd_pd(avx_grid[k + (row1 + 0) * avx_cols], avx_grid[k + (row2 + 0) * avx_cols], cache_00);
-                cache_01 = _mm512_fmadd_pd(avx_grid[k + (row1 + 0) * avx_cols], avx_grid[k + (row2 + 1) * avx_cols], cache_01);
-                cache_02 = _mm512_fmadd_pd(avx_grid[k + (row1 + 0) * avx_cols], avx_grid[k + (row2 + 2) * avx_cols], cache_02);
-                cache_03 = _mm512_fmadd_pd(avx_grid[k + (row1 + 0) * avx_cols], avx_grid[k + (row2 + 3) * avx_cols], cache_03);
+                // These must occupy 8 zmm registers
 
-                cache_10 = _mm512_fmadd_pd(avx_grid[k + (row1 + 1) * avx_cols], avx_grid[k + (row2 + 0) * avx_cols], cache_10);
-                cache_11 = _mm512_fmadd_pd(avx_grid[k + (row1 + 1) * avx_cols], avx_grid[k + (row2 + 1) * avx_cols], cache_11);
-                cache_12 = _mm512_fmadd_pd(avx_grid[k + (row1 + 1) * avx_cols], avx_grid[k + (row2 + 2) * avx_cols], cache_12);
-                cache_13 = _mm512_fmadd_pd(avx_grid[k + (row1 + 1) * avx_cols], avx_grid[k + (row2 + 3) * avx_cols], cache_13);
+                __m512d row1_0 = avx_grid[k + (row1 + 0) * avx_cols];
+                __m512d row1_1 = avx_grid[k + (row1 + 1) * avx_cols];
+                __m512d row1_2 = avx_grid[k + (row1 + 2) * avx_cols];
+                __m512d row1_3 = avx_grid[k + (row1 + 3) * avx_cols];
 
-                cache_20 = _mm512_fmadd_pd(avx_grid[k + (row1 + 2) * avx_cols], avx_grid[k + (row2 + 0) * avx_cols], cache_20);
-                cache_21 = _mm512_fmadd_pd(avx_grid[k + (row1 + 2) * avx_cols], avx_grid[k + (row2 + 1) * avx_cols], cache_21);
-                cache_22 = _mm512_fmadd_pd(avx_grid[k + (row1 + 2) * avx_cols], avx_grid[k + (row2 + 2) * avx_cols], cache_22);
-                cache_23 = _mm512_fmadd_pd(avx_grid[k + (row1 + 2) * avx_cols], avx_grid[k + (row2 + 3) * avx_cols], cache_23);
+                __m512d row2_0 = avx_grid[k + (row2 + 0) * avx_cols];
+                __m512d row2_1 = avx_grid[k + (row2 + 1) * avx_cols];
+                __m512d row2_2 = avx_grid[k + (row2 + 2) * avx_cols];
+                __m512d row2_3 = avx_grid[k + (row2 + 3) * avx_cols];
 
-                cache_30 = _mm512_fmadd_pd(avx_grid[k + (row1 + 3) * avx_cols], avx_grid[k + (row2 + 0) * avx_cols], cache_30);
-                cache_31 = _mm512_fmadd_pd(avx_grid[k + (row1 + 3) * avx_cols], avx_grid[k + (row2 + 1) * avx_cols], cache_31);
-                cache_32 = _mm512_fmadd_pd(avx_grid[k + (row1 + 3) * avx_cols], avx_grid[k + (row2 + 2) * avx_cols], cache_32);
-                cache_33 = _mm512_fmadd_pd(avx_grid[k + (row1 + 3) * avx_cols], avx_grid[k + (row2 + 3) * avx_cols], cache_33);
+                cache_00 = _mm512_fmadd_pd(row1_0, row2_0, cache_00);
+                cache_01 = _mm512_fmadd_pd(row1_0, row2_1, cache_01);
+                cache_02 = _mm512_fmadd_pd(row1_0, row2_2, cache_02);
+                cache_03 = _mm512_fmadd_pd(row1_0, row2_3, cache_03);
+
+                cache_10 = _mm512_fmadd_pd(row1_1, row2_0, cache_10);
+                cache_11 = _mm512_fmadd_pd(row1_1, row2_1, cache_11);
+                cache_12 = _mm512_fmadd_pd(row1_1, row2_2, cache_12);
+                cache_13 = _mm512_fmadd_pd(row1_1, row2_3, cache_13);
+
+                cache_20 = _mm512_fmadd_pd(row1_2, row2_0, cache_20);
+                cache_21 = _mm512_fmadd_pd(row1_2, row2_1, cache_21);
+                cache_22 = _mm512_fmadd_pd(row1_2, row2_2, cache_22);
+                cache_23 = _mm512_fmadd_pd(row1_2, row2_3, cache_23);
+
+                cache_30 = _mm512_fmadd_pd(row1_3, row2_0, cache_30);
+                cache_31 = _mm512_fmadd_pd(row1_3, row2_1, cache_31);
+                cache_32 = _mm512_fmadd_pd(row1_3, row2_2, cache_32);
+                cache_33 = _mm512_fmadd_pd(row1_3, row2_3, cache_33);
             }
 
             if (row1 + 0 < ny && row2 + 0 < ny) result[row2 + 0 + (row1 + 0) * ny] = (float)_mm512_reduce_add_pd(cache_00);
