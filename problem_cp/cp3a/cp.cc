@@ -130,63 +130,94 @@ void correlate(int ny, int nx, const float *data, float *result) {
                 continue;
             }
 
-            __m512d *cache_grid;
+            // __m512d *cache_grid;
 
-            if (posix_memalign((void**)&cache_grid, 64, CACHE_BLOCK * CACHE_BLOCK * DOUBLES_PER_VECTOR * sizeof(double)) != 0) {
-                // Return from function, this will cause
-                // address sanitizer issuer in the testing framework
-                // as other memory has not been freed.
-                // We dont care if we are not able to allocate memory for the __m512d
-                // all is lost.
-                //return;
-            }
+            // if (posix_memalign((void**)&cache_grid, 64, CACHE_BLOCK * CACHE_BLOCK * DOUBLES_PER_VECTOR * sizeof(double)) != 0) {
+            //     // Return from function, this will cause
+            //     // address sanitizer issuer in the testing framework
+            //     // as other memory has not been freed.
+            //     // We dont care if we are not able to allocate memory for the __m512d
+            //     // all is lost.
+            //     //return;
+            // }
 
+            __m512d cache_00 =  _mm512_set1_pd(0);
+            __m512d cache_01 =  _mm512_set1_pd(0);
+            __m512d cache_02 =  _mm512_set1_pd(0);
+            __m512d cache_03 =  _mm512_set1_pd(0);
+
+            __m512d cache_10 =  _mm512_set1_pd(0);
+            __m512d cache_11 =  _mm512_set1_pd(0);
+            __m512d cache_12 =  _mm512_set1_pd(0);
+            __m512d cache_13 =  _mm512_set1_pd(0);
+
+            __m512d cache_20 =  _mm512_set1_pd(0);
+            __m512d cache_21 =  _mm512_set1_pd(0);
+            __m512d cache_22 =  _mm512_set1_pd(0);
+            __m512d cache_23 =  _mm512_set1_pd(0);
+
+            __m512d cache_30 =  _mm512_set1_pd(0);
+            __m512d cache_31 =  _mm512_set1_pd(0);
+            __m512d cache_32 =  _mm512_set1_pd(0);
+            __m512d cache_33 =  _mm512_set1_pd(0);
 
             // Cache grid acts a accumulator
-            for (int ci = 0; ci < CACHE_BLOCK; ci++) {
+            // for (int ci = 0; ci < CACHE_BLOCK; ci++) {
 
-                for (int cj = 0; cj < CACHE_BLOCK; cj++) {
-                    cache_grid[cj + ci * CACHE_BLOCK] =  _mm512_set1_pd(0);
-                }
-            }
+            //     for (int cj = 0; cj < CACHE_BLOCK; cj++) {
+            //         cache_grid[cj + ci * CACHE_BLOCK] =  _mm512_set1_pd(0);
+            //     }
+            // }
 
             //asm("# loop starts here");
             for (int k = 0; k < avx_cols; k++) {
 
-                for (int ci = 0; ci < CACHE_BLOCK; ci++) {
+                cache_00 = _mm512_fmadd_pd(avx_grid[k + (row1 + 0) * avx_cols], avx_grid[k + (row2 + 0) * avx_cols], cache_00);
+                cache_01 = _mm512_fmadd_pd(avx_grid[k + (row1 + 0) * avx_cols], avx_grid[k + (row2 + 1) * avx_cols], cache_01);
+                cache_02 = _mm512_fmadd_pd(avx_grid[k + (row1 + 0) * avx_cols], avx_grid[k + (row2 + 2) * avx_cols], cache_02);
+                cache_03 = _mm512_fmadd_pd(avx_grid[k + (row1 + 0) * avx_cols], avx_grid[k + (row2 + 3) * avx_cols], cache_03);
 
-                    for (int cj = 0; cj < CACHE_BLOCK; cj++) {
+                cache_10 = _mm512_fmadd_pd(avx_grid[k + (row1 + 1) * avx_cols], avx_grid[k + (row2 + 0) * avx_cols], cache_10);
+                cache_11 = _mm512_fmadd_pd(avx_grid[k + (row1 + 1) * avx_cols], avx_grid[k + (row2 + 1) * avx_cols], cache_11);
+                cache_12 = _mm512_fmadd_pd(avx_grid[k + (row1 + 1) * avx_cols], avx_grid[k + (row2 + 2) * avx_cols], cache_12);
+                cache_13 = _mm512_fmadd_pd(avx_grid[k + (row1 + 1) * avx_cols], avx_grid[k + (row2 + 3) * avx_cols], cache_13);
 
-                        cache_grid[cj + ci * CACHE_BLOCK] = _mm512_fmadd_pd(avx_grid[k + (row1 + ci) * avx_cols], avx_grid[k + (row2 + cj) * avx_cols], cache_grid[cj + ci * CACHE_BLOCK]);
-                    }
-                }
-            }
-            //asm("# loop ends here");
+                cache_20 = _mm512_fmadd_pd(avx_grid[k + (row1 + 2) * avx_cols], avx_grid[k + (row2 + 0) * avx_cols], cache_20);
+                cache_21 = _mm512_fmadd_pd(avx_grid[k + (row1 + 2) * avx_cols], avx_grid[k + (row2 + 1) * avx_cols], cache_21);
+                cache_22 = _mm512_fmadd_pd(avx_grid[k + (row1 + 2) * avx_cols], avx_grid[k + (row2 + 2) * avx_cols], cache_22);
+                cache_23 = _mm512_fmadd_pd(avx_grid[k + (row1 + 2) * avx_cols], avx_grid[k + (row2 + 3) * avx_cols], cache_23);
 
-            for (int ci = 0; ci < CACHE_BLOCK; ci++) {
-
-                for (int cj = 0; cj < CACHE_BLOCK; cj++) {
-
-                    int res_row = row1 + ci;
-                    int res_col = row2 + cj;
-
-                    if (res_row < ny && res_col < ny) {
-
-                        result[res_col + res_row * ny] = (float)_mm512_reduce_add_pd(cache_grid[cj + ci * CACHE_BLOCK]);
-                    }
-                }
+                cache_30 = _mm512_fmadd_pd(avx_grid[k + (row1 + 3) * avx_cols], avx_grid[k + (row2 + 0) * avx_cols], cache_30);
+                cache_31 = _mm512_fmadd_pd(avx_grid[k + (row1 + 3) * avx_cols], avx_grid[k + (row2 + 1) * avx_cols], cache_31);
+                cache_32 = _mm512_fmadd_pd(avx_grid[k + (row1 + 3) * avx_cols], avx_grid[k + (row2 + 2) * avx_cols], cache_32);
+                cache_33 = _mm512_fmadd_pd(avx_grid[k + (row1 + 3) * avx_cols], avx_grid[k + (row2 + 3) * avx_cols], cache_33);
             }
 
-            //print_vector_grid(cache_grid, CACHE_BLOCK, CACHE_BLOCK);
-            free(cache_grid);
+            if (row1 + 0 < ny && row2 + 0 < ny) result[row2 + 0 + (row1 + 0) * ny] = (float)_mm512_reduce_add_pd(cache_00);
+            if (row1 + 0 < ny && row2 + 1 < ny) result[row2 + 1 + (row1 + 0) * ny] = (float)_mm512_reduce_add_pd(cache_01);
+            if (row1 + 0 < ny && row2 + 2 < ny) result[row2 + 2 + (row1 + 0) * ny] = (float)_mm512_reduce_add_pd(cache_02);
+            if (row1 + 0 < ny && row2 + 3 < ny) result[row2 + 3 + (row1 + 0) * ny] = (float)_mm512_reduce_add_pd(cache_03);
+
+            if (row1 + 1 < ny && row2 + 0 < ny) result[row2 + 0 + (row1 + 1) * ny] = (float)_mm512_reduce_add_pd(cache_10);
+            if (row1 + 1 < ny && row2 + 1 < ny) result[row2 + 1 + (row1 + 1) * ny] = (float)_mm512_reduce_add_pd(cache_11);
+            if (row1 + 1 < ny && row2 + 2 < ny) result[row2 + 2 + (row1 + 1) * ny] = (float)_mm512_reduce_add_pd(cache_12);
+            if (row1 + 1 < ny && row2 + 3 < ny) result[row2 + 3 + (row1 + 1) * ny] = (float)_mm512_reduce_add_pd(cache_13);
+
+            if (row1 + 2 < ny && row2 + 0 < ny) result[row2 + 0 + (row1 + 2) * ny] = (float)_mm512_reduce_add_pd(cache_20);
+            if (row1 + 2 < ny && row2 + 1 < ny) result[row2 + 1 + (row1 + 2) * ny] = (float)_mm512_reduce_add_pd(cache_21);
+            if (row1 + 2 < ny && row2 + 2 < ny) result[row2 + 2 + (row1 + 2) * ny] = (float)_mm512_reduce_add_pd(cache_22);
+            if (row1 + 2 < ny && row2 + 3 < ny) result[row2 + 3 + (row1 + 2) * ny] = (float)_mm512_reduce_add_pd(cache_23);
+
+            if (row1 + 3 < ny && row2 + 0 < ny) result[row2 + 0 + (row1 + 3) * ny] = (float)_mm512_reduce_add_pd(cache_30);
+            if (row1 + 3 < ny && row2 + 1 < ny) result[row2 + 1 + (row1 + 3) * ny] = (float)_mm512_reduce_add_pd(cache_31);
+            if (row1 + 3 < ny && row2 + 2 < ny) result[row2 + 2 + (row1 + 3) * ny] = (float)_mm512_reduce_add_pd(cache_32);
+            if (row1 + 3 < ny && row2 + 3 < ny) result[row2 + 3 + (row1 + 3) * ny] = (float)_mm512_reduce_add_pd(cache_33);
 
         }
     }
 
     free(norm_data);
     free(avx_grid);
-    //free(cache_grid);
-
 }
 
 void print_vector_grid(__m512d *grid, int rows, int cols) {
